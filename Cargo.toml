@@ -1,6 +1,22 @@
 [package]
 name = "usdt_watcher"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
+# Alloy - библиотека для Ethereum. Включаем 'full' для простоты старта.
+alloy = { version = "1.2.1", features = ["full"] }
+
+# Tokio - асинхронный рантайм
+tokio = { version = "1", features = ["full"] }
+
+# Для удобного вывода ошибок (Result)
+eyre = "0.6"
+# Для загрузки переменных окружения (скрыть URL ноды)
+dotenv = "0.15"
+
+futures-util = "0.3.31"
+url = "2.5.7"
+
+reqwest = { version = "0.13.1", default-features = false, features = ["json", "native-tls","http2"] }
+serde = { version = "1.0.228", features = ["derive"] }

@@ -47,12 +47,19 @@ cargo run --release
 
 ## 📸 Example Alert
 
+<<<<<<< HEAD
 ```text
+=======
+>>>>>>> 6c3834a3577756cfa59113554e4cf51a98c9e9af
 🚨 WHALE ALERT 🚨
 
 💰 Amount: $50,000.00 USDT
 📤 From: 0x123...abc
 📥 To: 0x456...def
 
+<<<<<<< HEAD
 🔗 View Transaction [Link]
 ```
+=======
+🔗 View Transaction [Link]
+>>>>>>> 6c3834a3577756cfa59113554e4cf51a98c9e9af
