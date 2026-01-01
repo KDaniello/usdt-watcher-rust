@@ -47,6 +47,7 @@ cargo run --release
 
 ## 📸 Example Alert
 
+```text
 🚨 WHALE ALERT 🚨
 
 💰 Amount: $50,000.00 USDT
@@ -54,3 +55,4 @@ cargo run --release
 📥 To: 0x456...def
 
 🔗 View Transaction [Link]
+```
