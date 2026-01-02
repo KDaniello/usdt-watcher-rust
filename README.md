@@ -1,24 +1,29 @@
 # 🐋 USDT Whale Watcher
 
-A high-performance, asynchronous Rust application that monitors the Ethereum blockchain in real-time for large USDT transfers ("Whale Movements") and sends instant alerts to Telegram.
+A production-ready, asynchronous Rust service that monitors Ethereum blockchain events in real-time. Designed for high availability and zero downtime.
 
-Unlike simple scripts, this watcher uses a **non-blocking architecture**: blockchain event processing continues uninterrupted even while network requests to Telegram are being sent.
+It automatically detects large token transfers (Whales) and sends instant non-blocking alerts to Telegram.
 
-## Features
+## 🚀 Features
 
-- **Real-time Monitoring:** Connects to Ethereum nodes via WebSocket (WSS) using the modern `alloy-rs` library.
-- **Node-Side Filtering:** Efficiently filters logs on the RPC node (saves bandwidth and CPU).
-- **Non-blocking Alerts:** Uses `tokio::spawn` to send HTTP requests to Telegram asynchronously without blocking the WebSocket stream.
-- **Configurable Threshold:** Alert sensitivity can be adjusted via environment variables (e.g., $10k, $50k).
-- **Smart Decoding:** Decodes raw binary EVM logs using the `sol!` macro.
+### 🛡️ Fault Tolerance & Resilience
+Unlike simple scripts, this service implements a **Self-Healing Connection Loop**.
+- Automatically detects WebSocket disconnects (e.g., node failures, network issues).
+- Implements a reconnection strategy with delay to prevent API rate limiting.
+
+### ⚡ Performance & Concurrency
+- **Non-blocking Alerts:** Uses `tokio::spawn` to offload HTTP requests. Blockchain event processing is never blocked by Telegram API latency.
+- **Node-Side Filtering:** Uses `eth_subscribe` filters to reduce bandwidth usage by 99%.
+
+### 📊 Observability
+- **Structured Logging:** Uses `tracing` crate for standardized logs (INFO/WARN/ERROR), making it easy to integrate with monitoring stacks (ELK, Grafana Loki)
 
 ## 🛠️ Tech Stack
 
-- **Language:** Rust
-- **Blockchain Client:** [Alloy]
-- **Async Runtime:** Tokio
-- **HTTP Client:** Reqwest (with native-tls and http2)
-- **Serialization:** Serde
+- **Core:** Rust, Tokio (Async Runtime)
+- **Web3:** Alloy (Modern Ethereum interaction)
+- **Networking:** Reqwest (HTTP/2, Native TLS)
+- **Logging:** Tracing & Tracing-Subscriber
 
 ## 📦 Installation & Setup
 
@@ -41,6 +46,10 @@ TELEGRAM_CHAT_ID=123456789
 
 # Minimum amount to alert (in USD). Default: 10000
 WHALE_THRESHOLD=50000
+
+# Contract to Watch (Default is USDT on Mainnet)
+# You can change this to USDC, SHIB, or any ERC-20 token.
+TARGET_CONTRACT=0xdac17f958d2ee523a2206206994597c13d831ec7
 ```
 
 ### 3. Run
@@ -48,8 +57,18 @@ WHALE_THRESHOLD=50000
 cargo run --release
 ```
 
-## 📸 Example Alert
+## 📸 Logs Output
+```text
+2026-01-02T15:29:54.533999Z  INFO usdt_watcher: 🎯 Target: 0xdac17f958d2ee523a2206206994597c13d831ec7
+2026-01-02T15:29:54.534155Z  INFO usdt_watcher: 💰 Threshold: $50000
+2026-01-02T15:29:54.534309Z  INFO usdt_watcher: Connecting to WebSocket...
+2026-01-02T15:29:55.091613Z  INFO usdt_watcher: ✅ Connected! Listening for USDT transfers > 50000...
 
+2026-01-02T15:30:00.005234Z  INFO usdt_watcher: 🐋 WHALE DETECTED: $200000.00 | Tx: 0x30e9a3596ec6de37276d79b04a0ee96a6a5ede2491a3f75878d65134f69d25ac
+2026-01-02T15:30:00.281564Z  INFO usdt_watcher: ✅ Alert sent to Telegram
+```
+
+## Telegram Alert
 ```text
 🚨 WHALE ALERT 🚨
 
@@ -60,5 +79,5 @@ cargo run --release
 🔗 View Transaction [Link]
 ```
 
-## Licence
-This project is open-source and available under the MIT License.
+## 📜 Licence
+MIT License.
