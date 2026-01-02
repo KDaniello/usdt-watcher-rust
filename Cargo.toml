@@ -1,16 +1,25 @@
 [package]
 name = "usdt_watcher"
-version = "0.1.0"
-edition = "2021"
+version = "0.2.0"
+edition = "2024"
 
 [dependencies]
+# Alloy
 alloy = { version = "1.2.1", features = ["full"] }
+
+# Async
 tokio = { version = "1", features = ["full"] }
+futures-util = "0.3.31"
+
+# Utils
 eyre = "0.6"
 dotenv = "0.15"
-
-futures-util = "0.3.31"
 url = "2.5.7"
 
+# HTTP & Serialization
 reqwest = { version = "0.13.1", default-features = false, features = ["json", "native-tls","http2"] }
 serde = { version = "1.0.228", features = ["derive"] }
+
+# Logging
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features =["env-filter"]}

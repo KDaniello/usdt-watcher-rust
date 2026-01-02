@@ -1,5 +1,5 @@
 use alloy::{
-    primitives::{Address, U256, address}, 
+    primitives::{Address}, 
     providers::{Provider, ProviderBuilder, WsConnect}, 
     rpc::types::Filter,
     sol, 
@@ -7,15 +7,15 @@ use alloy::{
 };
 use eyre::Result;
 use futures_util::StreamExt;
-use std::{env, thread::spawn};
+use std::env;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::str::FromStr;
+use std::time::Duration;
+use tracing::{error, info, warn};
 
 sol! {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
-
-const USDT_ADDRESS: Address = address!("dac17f958d2ee523a2206206994597c13d831ec7");
 
 // Telegram structure
 #[derive(Clone)]
@@ -37,8 +37,8 @@ fn spawn_telegram_alert(config: TelegramConfig, message: String) {
         let client = reqwest::Client::new();
 
         match client.post(&url).json(&params).send().await {
-            Ok(_) => {},
-            Err(e) => eprintln!("❌ Telegram Error: {:?}", e),
+            Ok(_) => info!("✅ Alert sent to Telegram"),
+            Err(e) => error!("❌ Failed to send alert: {:?}", e),
         }
     });
     
@@ -46,8 +46,14 @@ fn spawn_telegram_alert(config: TelegramConfig, message: String) {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+
+    // Init logger & env
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
     dotenv::dotenv().ok();
 
+    // Load Config
     let rpc_url = env::var("RPC_URL").expect("RPC_URL must be set in .env");
     let tg_config = TelegramConfig {
         token: env::var("TELEGRAM_BOT_TOKEN").expect("TELEGRAM_BOT_TOKEN must be set"),
@@ -55,20 +61,42 @@ async fn main() -> Result<()> {
     };
 
     let threshold_env = env::var("WHALE_THRESHOLD").unwrap_or_else(|_| "10000".to_string());
-    let whale_threshold_u128: u128 = threshold_env.parse().expect("Invalid WHALE_THRESHOLD number");
-    let whale_threshold_decimals = whale_threshold_u128 * 1_000_000;
+    let threshold_u128: u128 = threshold_env.parse().expect("Invalid WHALE_THRESHOLD number");
+    let threshold_decimals = threshold_u128 * 1_000_000;
 
-    println!("🐋 USDT Watcher Started");
-    println!("   Threshold: ${:?}", whale_threshold_u128);
-    println!("   Connecting via WS...");
+    let contract_str = env::var("TARGET_CONTRACT").unwrap_or_else(|_| "0xdac17f958d2ee523a2206206994597c13d831ec7".to_string());
+    let contract_address = Address::from_str(&contract_str).expect("Invalid contract address");
 
+    info!("🚀 Watcher Started");
+    info!("🎯 Target: {:?}", contract_address);
+    info!("💰 Threshold: ${}", threshold_u128);
+
+    // Loop reconnect
+    loop {
+        info!("Connecting to WebSocket...");
+
+        match run_watcher(&rpc_url, contract_address, threshold_decimals, tg_config.clone()).await {
+            Ok(_) => {
+                warn!("⚠️ Stream ended unexpectedly. Reconnecting in 5s...");
+            }
+            Err(e) => {
+                error!("❌ Connection error: {:?}. Reconnecting in 5s...", e);
+            }
+        }
+
+        tokio::time::sleep(Duration::from_secs(5)).await;
+    }
+}
+
+async fn run_watcher(rpc_url: &str, target: Address, threshold: u128, tg_config: TelegramConfig) -> Result<()> {
     let ws = WsConnect::new(rpc_url);
     let provider = ProviderBuilder::new().connect_ws(ws).await?;
 
-    println!("Connected! Listening for USDT transfers > {}...\n", threshold_env);
+    let display_threshold = threshold / 1_000_000;
+    info!("✅ Connected! Listening for USDT transfers > {}...\n", display_threshold);
 
     let filter = Filter::new()
-        .address(USDT_ADDRESS)
+        .address(target)
         .event_signature(Transfer::SIGNATURE_HASH);
 
     let sub = provider.subscribe_logs(&filter).await?;
@@ -79,9 +107,14 @@ async fn main() -> Result<()> {
             let transfer = decoded.inner.data;
             let amount_u128 = transfer.value.saturating_to::<u128>();
 
-            if amount_u128 >= whale_threshold_decimals {
+            if amount_u128 >= threshold {
                 let amount_formatted = amount_u128 as f64 / 1_000_000.0;
                 let tx_hash = log.transaction_hash.unwrap_or_default();
+
+                info!(
+                    "🐋 WHALE DETECTED: ${:.2} | Tx: {:?}",
+                    amount_formatted, tx_hash
+                );
 
                 let message = format!(
                     "🚨 <b>WHALE ALERT</b> 🚨\n\n💰 <b>Amount:</b> ${:.2} USDT\n📤 <b>From:</b> <code>{}</code>\n📥 <b>To:</b> <code>{}</code>\n\n🔗 <a href=\"https://etherscan.io/tx/{}\">View Transaction</a>",
@@ -89,11 +122,6 @@ async fn main() -> Result<()> {
                     transfer.from,
                     transfer.to,
                     tx_hash
-                );
-
-                println!(
-                    "🐋 WHALE ALERT! Moved: ${:.2} USDT (Tx: {:?})",
-                    amount_formatted, tx_hash
                 );
 
                 spawn_telegram_alert(tg_config.clone(), message);
