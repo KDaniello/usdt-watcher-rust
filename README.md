@@ -1,23 +1,23 @@
 # 🐋 USDT Whale Watcher
 
-A high-performance, asynchronous Rust application that monitors the Ethereum blockchain in real-time for large USDT transfers (>10000) and sends instant alerts to Telegram.
+A high-performance, asynchronous Rust application that monitors the Ethereum blockchain in real-time for large USDT transfers ("Whale Movements") and sends instant alerts to Telegram.
 
-Built with the **Alloy** stack for Ethereum interaction.
+Unlike simple scripts, this watcher uses a **non-blocking architecture**: blockchain event processing continues uninterrupted even while network requests to Telegram are being sent.
 
 ## Features
 
-- **Real-time Monitoring:** Connects to Ethereum nodes via WebSocket (WSS).
-- **Event Filtering:** Efficiently filters logs on the node side (saves bandwidth).
-- **Smart Decoding:** Decodes raw binary ABI data using `sol!` macro.
-- **Telegram Integration:** Sends formatted HTML alerts with Etherscan links.
-- **Async Runtime:** Fully non-blocking architecture powered by `tokio`.
+- **Real-time Monitoring:** Connects to Ethereum nodes via WebSocket (WSS) using the modern `alloy-rs` library.
+- **Node-Side Filtering:** Efficiently filters logs on the RPC node (saves bandwidth and CPU).
+- **Non-blocking Alerts:** Uses `tokio::spawn` to send HTTP requests to Telegram asynchronously without blocking the WebSocket stream.
+- **Configurable Threshold:** Alert sensitivity can be adjusted via environment variables (e.g., $10k, $50k).
+- **Smart Decoding:** Decodes raw binary EVM logs using the `sol!` macro.
 
 ## 🛠️ Tech Stack
 
 - **Language:** Rust
 - **Blockchain Client:** [Alloy]
 - **Async Runtime:** Tokio
-- **HTTP Client:** Reqwest (with native-tls)
+- **HTTP Client:** Reqwest (with native-tls and http2)
 - **Serialization:** Serde
 
 ## 📦 Installation & Setup
@@ -38,6 +38,9 @@ RPC_URL=wss://mainnet.infura.io/ws/v3/YOUR_API_KEY
 # Telegram Bot Config
 TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
 TELEGRAM_CHAT_ID=123456789
+
+# Minimum amount to alert (in USD). Default: 10000
+WHALE_THRESHOLD=50000
 ```
 
 ### 3. Run
@@ -56,3 +59,6 @@ cargo run --release
 
 🔗 View Transaction [Link]
 ```
+
+## Licence
+This project is open-source and available under the MIT License.
