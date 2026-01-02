@@ -80,4 +80,4 @@ cargo run --release
 ```
 
 ## 📜 Licence
-MIT License.
+MIT Licence.
